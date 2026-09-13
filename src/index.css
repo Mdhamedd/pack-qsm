@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html {
+  background: #0b1119;
+}
+
+body {
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+.safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+@media (max-width: 639px) {
+  main {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #48627a #141d27;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: #141d27;
+}
+*::-webkit-scrollbar-thumb {
+  background: #48627a;
+  border-radius: 8px;
+}
+
+@layer components {
+  .card {
+    @apply bg-steel-900 border border-steel-800 rounded-2xl shadow-industrial;
+  }
+  .btn-primary {
+    @apply bg-warning-500 hover:bg-warning-600 text-steel-950 font-bold py-2.5 px-4 rounded-xl transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-steel-800 hover:bg-steel-700 text-steel-100 font-semibold py-2.5 px-4 rounded-xl transition-colors duration-150 border border-steel-700;
+  }
+  .btn-danger {
+    @apply bg-danger-600 hover:bg-danger-500 text-white font-bold py-2.5 px-4 rounded-xl transition-colors duration-150;
+  }
+  .input-field {
+    @apply w-full bg-steel-800 border border-steel-700 rounded-xl px-3 py-2.5 text-steel-50 placeholder-steel-400 focus:outline-none focus:ring-2 focus:ring-warning-500 focus:border-transparent transition;
+  }
+  .label-field {
+    @apply block text-sm font-semibold text-steel-300 mb-1.5;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold;
+  }
+}
