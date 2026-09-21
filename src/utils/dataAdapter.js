@@ -165,7 +165,9 @@ export async function getTechnicians() {
 
 export async function saveTechnicians(technicians) {
   const uniqueTechnicians = [
-    ...new Set(technicians.map((technician) => technician.trim()).filter(Boolean)),
+    ...new Set(
+      technicians.map((technician) => technician.trim()).filter(Boolean),
+    ),
   ];
   writeLocal(KEYS.TECHNICIANS, uniqueTechnicians);
   return uniqueTechnicians;
