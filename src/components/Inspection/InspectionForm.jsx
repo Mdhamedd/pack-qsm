@@ -249,8 +249,9 @@ export default function InspectionForm({ onDone }) {
             <label className="label-field">اسم المفتش</label>
             <input
               className="input-field"
-              value={form.inspectorName}
+              value={INSPECTOR_NAME}
               readOnly
+              aria-label="اسم المفتش الثابت"
             />
           </div>
 

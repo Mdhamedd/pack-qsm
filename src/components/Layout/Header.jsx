@@ -58,7 +58,7 @@ export default function Header({
           <Menu className="w-6 h-6" />
         </button>
         <h2 className="text-steel-100 font-bold text-base md:text-lg">
-          Pack to Pack QMS
+          Pack to Pack QMS v2
         </h2>
       </div>
       <div className="flex items-center gap-2">
