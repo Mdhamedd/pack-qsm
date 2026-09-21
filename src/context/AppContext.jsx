@@ -11,6 +11,7 @@ import {
   DECISIONS,
   SCRAP_RATE_ALERT_THRESHOLD,
   CAPA_STATUS,
+  INSPECTOR_NAME,
 } from "../data/constants";
 
 const AppContext = createContext(null);
@@ -21,7 +22,7 @@ export function AppProvider({ children }) {
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState({
     whatsappNumber: "",
-    qualityManagerName: "",
+    qualityManagerName: INSPECTOR_NAME,
     productionManagerName: "",
   });
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,12 @@ export function AppProvider({ children }) {
     const issueList = await db.getShiftIssues();
     setInspections(list);
     setShiftIssues(issueList);
-    setSettings(s);
+    setSettings({
+      whatsappNumber: "",
+      qualityManagerName: INSPECTOR_NAME,
+      productionManagerName: "",
+      ...s,
+    });
     setProducts(productList);
     setLoading(false);
   }, []);

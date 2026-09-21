@@ -5,7 +5,7 @@
 // كل الدوال هنا "async" عمداً حتى تتوافق مع أي مصدر بيانات حقيقي مستقبلاً.
 // ==========================================================================
 
-import { PRODUCTS } from "../data/constants";
+import { INSPECTOR_NAME, PRODUCTS } from "../data/constants";
 
 const KEYS = {
   INSPECTIONS: "p2p_qms_inspections_v1",
@@ -45,7 +45,10 @@ function issueUid() {
 // -------------------- عمليات الفحوصات (Inspections) --------------------
 
 export async function getInspections() {
-  return readLocal(KEYS.INSPECTIONS, []);
+  return readLocal(KEYS.INSPECTIONS, []).map((inspection) => ({
+    ...inspection,
+    inspectorName: inspection.inspectorName || INSPECTOR_NAME,
+  }));
 }
 
 export async function getInspectionById(id) {
@@ -67,6 +70,7 @@ export async function saveInspection(inspection) {
     capaClosedDate: null,
     capaHistory: [],
     ...inspection,
+    inspectorName: INSPECTOR_NAME,
   };
   all.unshift(newRecord);
   writeLocal(KEYS.INSPECTIONS, all);
@@ -184,11 +188,14 @@ export async function clearAllData() {
 // -------------------- إعدادات عامة --------------------
 
 export async function getSettings() {
-  return readLocal(KEYS.SETTINGS, {
+  const saved = readLocal(KEYS.SETTINGS, {});
+  return {
     whatsappNumber: "",
-    qualityManagerName: "",
+    qualityManagerName: INSPECTOR_NAME,
     productionManagerName: "",
-  });
+    ...saved,
+    qualityManagerName: saved.qualityManagerName || INSPECTOR_NAME,
+  };
 }
 
 export async function saveSettings(settings) {

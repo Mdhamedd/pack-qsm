@@ -7,6 +7,8 @@ import {
   PRODUCTS,
   DECISION_LIST,
   DECISIONS,
+  INSPECTOR_NAME,
+  SHIFT_LIST,
 } from "../../data/constants";
 import DefectSelector from "./DefectSelector.jsx";
 import VoiceNoteButton from "./VoiceNoteButton.jsx";
@@ -16,11 +18,12 @@ import { shareInspectionOnWhatsApp } from "../../utils/whatsapp.js";
 const emptyForm = () => ({
   date: new Date().toISOString().slice(0, 10),
   time: new Date().toTimeString().slice(0, 5),
+  shift: SHIFT_LIST[0],
   machineNumber: MACHINES[0].value,
   productName: PRODUCTS[0],
   materialType: MATERIAL_TYPES[0].value,
   sampleWeight: "",
-  inspectorName: "",
+  inspectorName: INSPECTOR_NAME,
   operatorName: "",
   decision: DECISIONS.ACCEPTED,
   decisionReason: "",
@@ -31,6 +34,8 @@ const emptyForm = () => ({
   defects: [],
   notes: "",
   imageBase64: null,
+  scrapQuantity: "",
+  scrapReason: "",
 });
 
 export default function InspectionForm({ onDone }) {
@@ -56,7 +61,6 @@ export default function InspectionForm({ onDone }) {
   };
 
   const validate = () => {
-    if (!form.inspectorName.trim()) return "يرجى إدخال اسم المفتش";
     if (!form.sampleWeight || Number(form.sampleWeight) <= 0)
       return "يرجى إدخال وزن عينة صحيح";
     if (form.decision !== DECISIONS.ACCEPTED && form.defects.length === 0) {
@@ -146,6 +150,18 @@ export default function InspectionForm({ onDone }) {
               onChange={(e) => update({ time: e.target.value })}
             />
           </div>
+          <div>
+            <label className="label-field">الوردية</label>
+            <select
+              className="input-field"
+              value={form.shift}
+              onChange={(e) => update({ shift: e.target.value })}
+            >
+              {SHIFT_LIST.map((shift) => (
+                <option key={shift}>{shift}</option>
+              ))}
+            </select>
+          </div>
 
           <div>
             <label className="label-field">رقم الماكينة</label>
@@ -234,8 +250,7 @@ export default function InspectionForm({ onDone }) {
             <input
               className="input-field"
               value={form.inspectorName}
-              onChange={(e) => update({ inspectorName: e.target.value })}
-              placeholder="اسم مهندس/مفتش الجودة"
+              readOnly
             />
           </div>
 
@@ -285,6 +300,33 @@ export default function InspectionForm({ onDone }) {
               onChange={(e) => update({ decisionReason: e.target.value })}
               placeholder="اذكر السبب القابل للمراجعة: نوع العيب، تأثيره، والكمية أو النطاق المتأثر..."
             />
+            <div className="grid sm:grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="label-field text-danger-300">
+                  كمية الهالك
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="input-field"
+                  value={form.scrapQuantity}
+                  onChange={(e) => update({ scrapQuantity: e.target.value })}
+                  placeholder="الكمية"
+                />
+              </div>
+              <div>
+                <label className="label-field text-danger-300">
+                  سبب الهالك
+                </label>
+                <input
+                  className="input-field"
+                  value={form.scrapReason}
+                  onChange={(e) => update({ scrapReason: e.target.value })}
+                  placeholder="لماذا تم إهلاك الكمية؟"
+                />
+              </div>
+            </div>
           </div>
         )}
 

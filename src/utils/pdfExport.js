@@ -23,7 +23,14 @@ export function ar(text) {
   const str = String(text);
   if (!reshaper || !containsArabic(str)) return str;
   try {
-    return reshaper.ArabicShaper.convertArabic(str);
+    return str
+      .split(/([A-Za-z0-9%#:/._-]+)/g)
+      .map((part) => {
+        if (!containsArabic(part)) return part;
+        const shaped = reshaper.ArabicShaper.convertArabic(part);
+        return Array.from(shaped).reverse().join("");
+      })
+      .join("");
   } catch (e) {
     return str;
   }
@@ -293,6 +300,146 @@ export function buildSummaryPdf(
   return generatePdf(content, `Summary_Report`);
 }
 
+export function buildShiftIssuesPdf(
+  issues,
+  { qualityManagerName = "", productionManagerName = "" } = {},
+) {
+  const rows = issues.map((issue) => [
+    arCell(issue.date),
+    arCell(issue.shift),
+    arCell(String(issue.machineNumber)),
+    arCell(issue.issueType || "-"),
+    arCell(issue.description || "-"),
+    arCell(issue.status || "-"),
+  ]);
+  const content = [
+    headerBlock(),
+    {
+      text: ar("تقرير مشاكل الوردية"),
+      font: PDF_FONT,
+      alignment: "center",
+      fontSize: 14,
+      bold: true,
+      margin: [0, 10, 0, 10],
+    },
+    {
+      table: {
+        headerRows: 1,
+        widths: ["auto", "auto", "auto", "*", "*", "auto"],
+        body: [
+          [
+            "التاريخ",
+            "الوردية",
+            "الماكينة",
+            "نوع المشكلة",
+            "الوصف",
+            "الحالة",
+          ].map((item) =>
+            arCell(item, { bold: true, fillColor: "#1f2c3a", color: "white" }),
+          ),
+          ...rows.map((row) => row.reverse()),
+        ],
+      },
+      layout: tableLayout(),
+    },
+    signatureBlock(qualityManagerName, productionManagerName),
+  ];
+  return generatePdf(content, "Shift_Issues_Report");
+}
+
+export function buildScrapPdf(
+  inspections,
+  { qualityManagerName = "", productionManagerName = "" } = {},
+) {
+  const rows = inspections.map((inspection) => [
+    arCell(inspection.date),
+    arCell(inspection.shift || "-"),
+    arCell(String(inspection.machineNumber)),
+    arCell(String(inspection.scrapQuantity || 0)),
+    arCell(inspection.scrapReason || inspection.decisionReason || "-"),
+  ]);
+  return generatePdf(
+    [
+      headerBlock(),
+      {
+        text: ar("تقرير الهالك"),
+        font: PDF_FONT,
+        alignment: "center",
+        fontSize: 14,
+        bold: true,
+        margin: [0, 10, 0, 10],
+      },
+      {
+        table: {
+          headerRows: 1,
+          widths: ["auto", "auto", "auto", "auto", "*"],
+          body: [
+            ["التاريخ", "الوردية", "الماكينة", "الكمية", "سبب الهالك"].map(
+              (item) =>
+                arCell(item, {
+                  bold: true,
+                  fillColor: "#1f2c3a",
+                  color: "white",
+                }),
+            ),
+            ...rows.map((row) => row.reverse()),
+          ],
+        },
+        layout: tableLayout(),
+      },
+      signatureBlock(qualityManagerName, productionManagerName),
+    ],
+    "Scrap_Report",
+  );
+}
+
+export function buildNonconformityPdf(
+  inspections,
+  { qualityManagerName = "", productionManagerName = "" } = {},
+) {
+  const rows = inspections.map((inspection) => [
+    arCell(inspection.date),
+    arCell(inspection.shift || "-"),
+    arCell(String(inspection.machineNumber)),
+    arCell(inspection.productName),
+    arCell(inspection.decision),
+    arCell(inspection.decisionReason || inspection.acceptanceConditions || "-"),
+  ]);
+  return generatePdf(
+    [
+      headerBlock(),
+      {
+        text: ar("تقرير عدم المطابقة"),
+        font: PDF_FONT,
+        alignment: "center",
+        fontSize: 14,
+        bold: true,
+        margin: [0, 10, 0, 10],
+      },
+      {
+        table: {
+          headerRows: 1,
+          widths: ["auto", "auto", "auto", "*", "auto", "*"],
+          body: [
+            ["التاريخ", "الوردية", "الماكينة", "المنتج", "القرار", "السبب"].map(
+              (item) =>
+                arCell(item, {
+                  bold: true,
+                  fillColor: "#1f2c3a",
+                  color: "white",
+                }),
+            ),
+            ...rows.map((row) => row.reverse()),
+          ],
+        },
+        layout: tableLayout(),
+      },
+      signatureBlock(qualityManagerName, productionManagerName),
+    ],
+    "Nonconformity_Report",
+  );
+}
+
 // ---------------------------------------------------------------------
 // أجزاء مشتركة (Header / Signatures / KPI row / Layouts)
 // ---------------------------------------------------------------------
@@ -455,7 +602,8 @@ async function generatePdf(content, filename) {
     getPdfVfs() || vfs,
   );
   return {
-    download: () => doc.download(`${filename}.pdf`),
+    download: (customFilename) =>
+      doc.download(`${customFilename || filename}.pdf`),
     open: () => doc.open(),
     getDataUrl: (cb) => doc.getDataUrl(cb),
   };

@@ -45,6 +45,9 @@ export const DECISIONS = {
   CONDITIONAL: "مقبول بشرط",
 };
 
+export const INSPECTOR_NAME = "محمد حامد";
+export const SHIFT_LIST = ["صباحية", "مسائية", "ليلية"];
+
 export const DECISION_LIST = [
   DECISIONS.ACCEPTED,
   DECISIONS.REJECTED,
