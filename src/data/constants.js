@@ -47,6 +47,13 @@ export const DECISIONS = {
 
 export const INSPECTOR_NAME = "محمد حامد";
 export const SHIFT_LIST = ["صباحية", "مسائية", "ليلية"];
+export const DEFAULT_TECHNICIANS = [
+  "احمد مجدي",
+  "محمد جمال",
+  "محمد ناجح",
+  "احمد سعد",
+  "عبدالرحمن",
+];
 
 export const DECISION_LIST = [
   DECISIONS.ACCEPTED,

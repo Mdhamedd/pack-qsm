@@ -20,6 +20,7 @@ export function AppProvider({ children }) {
   const [inspections, setInspections] = useState([]);
   const [shiftIssues, setShiftIssues] = useState([]);
   const [products, setProducts] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
   const [settings, setSettings] = useState({
     whatsappNumber: "",
     qualityManagerName: INSPECTOR_NAME,
@@ -30,10 +31,11 @@ export function AppProvider({ children }) {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [list, s, productList] = await Promise.all([
+    const [list, s, productList, technicianList] = await Promise.all([
       db.getInspections(),
       db.getSettings(),
       db.getProducts(),
+      db.getTechnicians(),
     ]);
     const issueList = await db.getShiftIssues();
     setInspections(list);
@@ -45,6 +47,7 @@ export function AppProvider({ children }) {
       ...s,
     });
     setProducts(productList);
+    setTechnicians(technicianList);
     setLoading(false);
   }, []);
 
@@ -122,6 +125,24 @@ export function AppProvider({ children }) {
     [products],
   );
 
+  const addTechnician = useCallback(
+    async (technicianName) => {
+      const name = technicianName.trim();
+      if (!name) throw new Error("يرجى كتابة اسم الفني");
+      if (
+        technicians.some(
+          (technician) => technician.toLowerCase() === name.toLowerCase(),
+        )
+      ) {
+        throw new Error("هذا الفني موجود بالفعل");
+      }
+      const updated = await db.saveTechnicians([...technicians, name]);
+      setTechnicians(updated);
+      return name;
+    },
+    [technicians],
+  );
+
   // -------------------- KPIs المشتقة --------------------
   const kpis = useMemo(() => {
     const total = inspections.length;
@@ -181,6 +202,7 @@ export function AppProvider({ children }) {
     inspections,
     shiftIssues,
     products,
+    technicians,
     settings,
     loading,
     isOnline,
@@ -194,6 +216,7 @@ export function AppProvider({ children }) {
     removeShiftIssue,
     updateSettings,
     addProduct,
+    addTechnician,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

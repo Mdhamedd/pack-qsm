@@ -39,13 +39,22 @@ const emptyForm = () => ({
 });
 
 export default function InspectionForm({ onDone }) {
-  const { addInspection, settings, products, addProduct } = useApp();
+  const {
+    addInspection,
+    settings,
+    products,
+    addProduct,
+    technicians,
+    addTechnician,
+  } = useApp();
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [error, setError] = useState("");
   const [newProduct, setNewProduct] = useState("");
   const [productError, setProductError] = useState("");
+  const [newTechnician, setNewTechnician] = useState("");
+  const [technicianError, setTechnicianError] = useState("");
 
   const update = (patch) => setForm((prev) => ({ ...prev, ...patch }));
 
@@ -57,6 +66,17 @@ export default function InspectionForm({ onDone }) {
       setProductError("");
     } catch (err) {
       setProductError(err.message);
+    }
+  };
+
+  const handleAddTechnician = async () => {
+    try {
+      const technician = await addTechnician(newTechnician);
+      update({ operatorName: technician });
+      setNewTechnician("");
+      setTechnicianError("");
+    } catch (err) {
+      setTechnicianError(err.message);
     }
   };
 
@@ -257,12 +277,38 @@ export default function InspectionForm({ onDone }) {
 
           <div className="sm:col-span-2">
             <label className="label-field">اسم الفني المشغل للماكينة</label>
-            <input
+            <select
               className="input-field"
               value={form.operatorName}
               onChange={(e) => update({ operatorName: e.target.value })}
-              placeholder="اسم الفني"
-            />
+            >
+              <option value="">اختر اسم الفني</option>
+              {technicians.map((technician) => (
+                <option key={technician} value={technician}>
+                  {technician}
+                </option>
+              ))}
+            </select>
+            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+              <input
+                className="input-field"
+                value={newTechnician}
+                onChange={(e) => setNewTechnician(e.target.value)}
+                placeholder="إضافة اسم فني جديد"
+              />
+              <button
+                type="button"
+                onClick={handleAddTechnician}
+                className="btn-secondary whitespace-nowrap flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> إضافة فني
+              </button>
+            </div>
+            {technicianError && (
+              <p className="text-danger-300 text-xs font-semibold mt-1">
+                {technicianError}
+              </p>
+            )}
           </div>
         </div>
 

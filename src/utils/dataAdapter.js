@@ -5,13 +5,18 @@
 // كل الدوال هنا "async" عمداً حتى تتوافق مع أي مصدر بيانات حقيقي مستقبلاً.
 // ==========================================================================
 
-import { INSPECTOR_NAME, PRODUCTS } from "../data/constants";
+import {
+  DEFAULT_TECHNICIANS,
+  INSPECTOR_NAME,
+  PRODUCTS,
+} from "../data/constants";
 
 const KEYS = {
   INSPECTIONS: "p2p_qms_inspections_v1",
   SHIFT_ISSUES: "p2p_qms_shift_issues_v1",
   SETTINGS: "p2p_qms_settings_v1",
   PRODUCTS: "p2p_qms_products_v1",
+  TECHNICIANS: "p2p_qms_technicians_v1",
 };
 
 function readLocal(key, fallback) {
@@ -146,6 +151,26 @@ export async function saveProducts(products) {
   return uniqueProducts;
 }
 
+export async function getTechnicians() {
+  const saved = readLocal(KEYS.TECHNICIANS, null);
+  if (!Array.isArray(saved)) return DEFAULT_TECHNICIANS;
+  return [
+    ...new Set(
+      [...DEFAULT_TECHNICIANS, ...saved]
+        .map((technician) => technician.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+export async function saveTechnicians(technicians) {
+  const uniqueTechnicians = [
+    ...new Set(technicians.map((technician) => technician.trim()).filter(Boolean)),
+  ];
+  writeLocal(KEYS.TECHNICIANS, uniqueTechnicians);
+  return uniqueTechnicians;
+}
+
 // -------------------- النسخ الاحتياطي (Backup) --------------------
 
 export async function exportBackupObject() {
@@ -153,6 +178,7 @@ export async function exportBackupObject() {
   const shiftIssues = readLocal(KEYS.SHIFT_ISSUES, []);
   const settings = readLocal(KEYS.SETTINGS, {});
   const products = readLocal(KEYS.PRODUCTS, PRODUCTS);
+  const technicians = readLocal(KEYS.TECHNICIANS, DEFAULT_TECHNICIANS);
   return {
     app: "Pack to Pack QMS",
     version: 1,
@@ -161,6 +187,7 @@ export async function exportBackupObject() {
     shiftIssues,
     settings,
     products,
+    technicians,
   };
 }
 
@@ -174,6 +201,8 @@ export async function importBackupObject(backup) {
   if (backup.settings) writeLocal(KEYS.SETTINGS, backup.settings);
   if (Array.isArray(backup.products))
     writeLocal(KEYS.PRODUCTS, backup.products);
+  if (Array.isArray(backup.technicians))
+    writeLocal(KEYS.TECHNICIANS, backup.technicians);
   return true;
 }
 
@@ -182,6 +211,7 @@ export async function clearAllData() {
   localStorage.removeItem(KEYS.SHIFT_ISSUES);
   localStorage.removeItem(KEYS.SETTINGS);
   localStorage.removeItem(KEYS.PRODUCTS);
+  localStorage.removeItem(KEYS.TECHNICIANS);
   return true;
 }
 
