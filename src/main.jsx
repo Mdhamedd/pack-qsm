@@ -18,7 +18,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // تسجيل الـ Service Worker يتم تلقائياً عبر vite-plugin-pwa (virtual:pwa-register)
 if ('serviceWorker' in navigator) {
   import('virtual:pwa-register').then(({ registerSW }) => {
-    registerSW({ immediate: true });
+    registerSW({
+      immediate: true,
+      onRegisteredSW(_swUrl, registration) {
+        registration?.update();
+      },
+    });
   }).catch(() => {
     // في وضع التطوير بدون PWA build، يتم تجاهل الخطأ بأمان
   });
