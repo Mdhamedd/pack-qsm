@@ -221,6 +221,43 @@ export function buildSummaryPdf(
       bold: true,
       margin: [0, 10, 0, 10],
     },
+    {
+      columns: [
+        {
+          width: "*",
+          stack: [
+            {
+              text: ar(
+                `تاريخ التقرير: ${new Date().toLocaleDateString("ar-EG")}`,
+              ),
+              font: PDF_FONT,
+              fontSize: 9,
+              color: "#64748b",
+              alignment: "right",
+            },
+            {
+              text: ar(`عدد الفحوصات: ${inspections.length}`),
+              font: PDF_FONT,
+              fontSize: 9,
+              color: "#64748b",
+              alignment: "right",
+              margin: [0, 4, 0, 0],
+            },
+          ],
+        },
+        {
+          width: "auto",
+          text: ar("ملخص الأداء"),
+          font: PDF_FONT,
+          bold: true,
+          alignment: "center",
+          color: "#0f172a",
+          background: "#f8fafc",
+          margin: [10, 0, 10, 0],
+        },
+      ],
+      margin: [0, 0, 0, 8],
+    },
 
     kpiRow(kpis),
 
@@ -355,8 +392,13 @@ export function buildScrapPdf(
     arCell(inspection.date),
     arCell(inspection.shift || "-"),
     arCell(String(inspection.machineNumber)),
-    arCell(String(inspection.scrapQuantity || 0)),
-    arCell(inspection.scrapReason || inspection.decisionReason || "-"),
+    arCell(String(inspection.quantity ?? inspection.scrapQuantity ?? 0)),
+    arCell(
+      inspection.reason ||
+        inspection.scrapReason ||
+        inspection.decisionReason ||
+        "-",
+    ),
   ]);
   return generatePdf(
     [
@@ -433,6 +475,35 @@ export function buildNonconformityPdf(
           ],
         },
         layout: tableLayout(),
+      },
+      {
+        text: ar("إقرار المسؤولية الإدارية"),
+        font: PDF_FONT,
+        bold: true,
+        alignment: "right",
+        margin: [0, 14, 0, 4],
+      },
+      {
+        text: ar(
+          "أقر بأن أي تشغيل أو إفراج عن المنتج المذكور في هذا التقرير تم على مسؤوليتي الإدارية وبعد مراجعة أسباب عدم المطابقة.",
+        ),
+        font: PDF_FONT,
+        alignment: "right",
+        margin: [0, 0, 0, 8],
+      },
+      {
+        columns: [
+          {
+            text: ar("اسم المدير: ____________________"),
+            font: PDF_FONT,
+            alignment: "right",
+          },
+          {
+            text: ar("التوقيع: ____________________"),
+            font: PDF_FONT,
+            alignment: "right",
+          },
+        ],
       },
       signatureBlock(qualityManagerName, productionManagerName),
     ],

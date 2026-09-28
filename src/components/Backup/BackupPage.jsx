@@ -11,16 +11,21 @@ export default function BackupPage({ readOnly = false }) {
   const [localSettings, setLocalSettings] = useState(settings);
 
   const handleExport = async () => {
-    const backup = await db.exportBackupObject();
-    const blob = new Blob([JSON.stringify(backup, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pack_to_pack_qms_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const backup = await db.exportBackupObject();
+      const blob = new Blob([JSON.stringify(backup, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pack_to_pack_qms_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMessage("تم تصدير النسخة الاحتياطية بنجاح");
+    } catch (error) {
+      setMessage(error.message || "تعذر تصدير النسخة الاحتياطية.");
+    }
   };
 
   const handleImport = async (file) => {
@@ -34,9 +39,7 @@ export default function BackupPage({ readOnly = false }) {
         `تم استرجاع النسخة الاحتياطية بنجاح (${backup.inspections.length} فحص)`,
       );
     } catch (e) {
-      setMessage(
-        "فشل استرجاع الملف: تأكد أنه ملف نسخة احتياطية صالح لنظام Pack to Pack QMS",
-      );
+      setMessage(e.message || "فشل استرجاع الملف الاحتياطي.");
     }
   };
 
@@ -47,14 +50,22 @@ export default function BackupPage({ readOnly = false }) {
       )
     )
       return;
-    await db.clearAllData();
-    await refresh();
-    setMessage("تم مسح جميع البيانات");
+    try {
+      await db.clearAllData();
+      await refresh();
+      setMessage("تم مسح جميع البيانات");
+    } catch (error) {
+      setMessage(error.message || "تعذر مسح البيانات.");
+    }
   };
 
   const saveSettings = async () => {
-    await updateSettings(localSettings);
-    setMessage("تم حفظ الإعدادات بنجاح");
+    try {
+      await updateSettings(localSettings);
+      setMessage("تم حفظ الإعدادات بنجاح");
+    } catch (error) {
+      setMessage(error.message || "تعذر حفظ الإعدادات.");
+    }
   };
 
   return (

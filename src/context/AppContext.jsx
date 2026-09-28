@@ -10,15 +10,16 @@ import * as db from "../utils/dataAdapter";
 import {
   DECISIONS,
   SCRAP_RATE_ALERT_THRESHOLD,
-  CAPA_STATUS,
   INSPECTOR_NAME,
 } from "../data/constants";
+import { isOpenCapaInspection } from "../utils/capa.js";
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [inspections, setInspections] = useState([]);
   const [shiftIssues, setShiftIssues] = useState([]);
+  const [scrapRecords, setScrapRecords] = useState([]);
   const [products, setProducts] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [settings, setSettings] = useState({
@@ -27,32 +28,43 @@ export function AppProvider({ children }) {
     productionManagerName: "",
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [list, s, productList, technicianList] = await Promise.all([
-      db.getInspections(),
-      db.getSettings(),
-      db.getProducts(),
-      db.getTechnicians(),
-    ]);
-    const issueList = await db.getShiftIssues();
-    setInspections(list);
-    setShiftIssues(issueList);
-    setSettings({
-      whatsappNumber: "",
-      qualityManagerName: INSPECTOR_NAME,
-      productionManagerName: "",
-      ...s,
-    });
-    setProducts(productList);
-    setTechnicians(technicianList);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const [list, s, productList, technicianList, scrapList, issueList] =
+        await Promise.all([
+          db.getInspections(),
+          db.getSettings(),
+          db.getProducts(),
+          db.getTechnicians(),
+          db.getScrapRecords(),
+          db.getShiftIssues(),
+        ]);
+      setInspections(list);
+      setShiftIssues(issueList);
+      setSettings({
+        whatsappNumber: "",
+        qualityManagerName: INSPECTOR_NAME,
+        productionManagerName: "",
+        ...s,
+      });
+      setProducts(productList);
+      setTechnicians(technicianList);
+      setScrapRecords(scrapList);
+    } catch (error) {
+      setLoadError(error.message || "تعذر تحميل البيانات من هذا الجهاز.");
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    refresh();
+    refresh().catch(() => {});
     const on = () => setIsOnline(true);
     const off = () => setIsOnline(false);
     window.addEventListener("online", on);
@@ -97,6 +109,23 @@ export function AppProvider({ children }) {
   const removeShiftIssue = useCallback(async (id) => {
     await db.deleteShiftIssue(id);
     setShiftIssues((prev) => prev.filter((issue) => issue.id !== id));
+  }, []);
+
+  const addScrapRecord = useCallback(async (data) => {
+    const record = await db.saveScrapRecord(data);
+    setScrapRecords((prev) => [record, ...prev]);
+    return record;
+  }, []);
+
+  const editScrapRecord = useCallback(async (id, patch) => {
+    const updated = await db.updateScrapRecord(id, patch);
+    setScrapRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
+    return updated;
+  }, []);
+
+  const removeScrapRecord = useCallback(async (id) => {
+    await db.deleteScrapRecord(id);
+    setScrapRecords((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
   const updateSettings = useCallback(
@@ -155,16 +184,18 @@ export function AppProvider({ children }) {
     const accepted = inspections.filter(
       (i) => i.decision === DECISIONS.ACCEPTED,
     ).length;
+    const legacyScrap = inspections.reduce(
+      (sum, inspection) => sum + Number(inspection.scrapQuantity || 0),
+      0,
+    );
+    const standaloneScrap = scrapRecords.reduce(
+      (sum, record) => sum + Number(record.quantity || 0),
+      0,
+    );
+    const scrapQuantity = legacyScrap + standaloneScrap;
     const scrapRate = total > 0 ? (rejected / total) * 100 : 0;
 
-    const openCases = inspections.filter(
-      (i) =>
-        (i.decision === DECISIONS.REJECTED ||
-          i.decision === DECISIONS.CONDITIONAL) &&
-        (!i.capaStatus ||
-          i.capaStatus === CAPA_STATUS.OPEN ||
-          i.capaStatus === CAPA_STATUS.IN_PROGRESS),
-    );
+    const openCases = inspections.filter(isOpenCapaInspection);
 
     const criticalOpenCases = openCases.filter((i) =>
       (i.defects || []).some((d) => d.severity === "حرج"),
@@ -190,21 +221,25 @@ export function AppProvider({ children }) {
       conditional,
       accepted,
       scrapRate,
+      scrapQuantity,
+      scrapRecordsCount: scrapRecords.length,
       openCases,
       openCasesCount: openCases.length,
       criticalOpenCasesCount: criticalOpenCases.length,
       isAlert,
       paretoData,
     };
-  }, [inspections]);
+  }, [inspections, scrapRecords]);
 
   const value = {
     inspections,
     shiftIssues,
+    scrapRecords,
     products,
     technicians,
     settings,
     loading,
+    loadError,
     isOnline,
     kpis,
     refresh,
@@ -214,6 +249,9 @@ export function AppProvider({ children }) {
     addShiftIssue,
     editShiftIssue,
     removeShiftIssue,
+    addScrapRecord,
+    editScrapRecord,
+    removeScrapRecord,
     updateSettings,
     addProduct,
     addTechnician,

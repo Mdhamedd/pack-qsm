@@ -11,16 +11,9 @@ import { useApp } from "../../context/AppContext.jsx";
 import FilterBar from "./FilterBar.jsx";
 import ParetoChart from "../Dashboard/ParetoChart.jsx";
 import DecisionPieChart from "../Dashboard/DecisionPieChart.jsx";
-import { exportInspectionsToExcel } from "../../utils/excelExport.js";
-import {
-  buildInspectionPdf,
-  buildNonconformityPdf,
-  buildScrapPdf,
-  buildShiftIssuesPdf,
-  buildSummaryPdf,
-} from "../../utils/pdfExport.js";
 import { shareShiftSummaryOnWhatsApp } from "../../utils/whatsapp.js";
 import { DECISIONS, INSPECTOR_NAME, SHIFT_LIST } from "../../data/constants";
+import { isOpenCapaInspection } from "../../utils/capa.js";
 
 const emptyFilters = {
   dateFrom: "",
@@ -32,7 +25,7 @@ const emptyFilters = {
 };
 
 export default function ReportsPage() {
-  const { inspections, shiftIssues, settings } = useApp();
+  const { inspections, shiftIssues, scrapRecords, settings } = useApp();
   const [filters, setFilters] = useState(emptyFilters);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -73,12 +66,27 @@ export default function ReportsPage() {
       (i) => i.decision === DECISIONS.ACCEPTED,
     ).length;
     const scrapRate = total > 0 ? (rejected / total) * 100 : 0;
-    const openCasesCount = filtered.filter(
-      (i) =>
-        (i.decision === DECISIONS.REJECTED ||
-          i.decision === DECISIONS.CONDITIONAL) &&
-        (!i.capaStatus || i.capaStatus === "مفتوح"),
-    ).length;
+    const openCasesCount = filtered.filter(isOpenCapaInspection).length;
+    const filteredStandaloneScrap = scrapRecords.filter((record) => {
+      if (filters.dateFrom && record.date < filters.dateFrom) return false;
+      if (filters.dateTo && record.date > filters.dateTo) return false;
+      if (filters.shift && record.shift !== filters.shift) return false;
+      if (
+        filters.machineNumber &&
+        String(record.machineNumber) !== String(filters.machineNumber)
+      )
+        return false;
+      return true;
+    });
+    const scrapQuantity =
+      filtered.reduce(
+        (sum, inspection) => sum + Number(inspection.scrapQuantity || 0),
+        0,
+      ) +
+      filteredStandaloneScrap.reduce(
+        (sum, record) => sum + Number(record.quantity || 0),
+        0,
+      );
 
     const defectCounts = {};
     filtered.forEach((i) =>
@@ -97,16 +105,28 @@ export default function ReportsPage() {
       accepted,
       scrapRate,
       openCasesCount,
+      scrapQuantity,
       paretoData,
     };
-  }, [filtered]);
+  }, [filtered, filters, scrapRecords]);
 
-  const handleExportExcel = () => exportInspectionsToExcel(filtered);
+  const handleExportExcel = async () => {
+    setExportError("");
+    try {
+      const { exportInspectionsToExcel } =
+        await import("../../utils/excelExport.js");
+      exportInspectionsToExcel(filtered);
+    } catch (error) {
+      console.error("فشل تصدير Excel:", error);
+      setExportError("تعذر تصدير ملف Excel. حاول مرة أخرى.");
+    }
+  };
 
   const handleExportPdf = async () => {
     setExportError("");
     setExportingPdf(true);
     try {
+      const { buildSummaryPdf } = await import("../../utils/pdfExport.js");
       const chartImages = {};
       try {
         if (paretoRef.current?.toBase64Image) {
@@ -143,7 +163,9 @@ export default function ReportsPage() {
   const exportReport = async (builder, records, filename) => {
     setExportError("");
     try {
-      const pdf = await builder(records, {
+      const pdfExport = await import("../../utils/pdfExport.js");
+      const pdfBuilder = pdfExport[builder];
+      const pdf = await pdfBuilder(records, {
         qualityManagerName: settings.qualityManagerName || INSPECTOR_NAME,
         productionManagerName: settings.productionManagerName,
       });
@@ -154,11 +176,30 @@ export default function ReportsPage() {
     }
   };
 
-  const scrapRecords = filtered.filter(
+  const inspectionScrapRecords = filtered.filter(
     (inspection) =>
       inspection.decision === DECISIONS.REJECTED ||
       Number(inspection.scrapQuantity) > 0,
   );
+  const filteredScrapRecords = scrapRecords.filter((record) => {
+    if (filters.dateFrom && record.date < filters.dateFrom) return false;
+    if (filters.dateTo && record.date > filters.dateTo) return false;
+    if (filters.shift && record.shift !== filters.shift) return false;
+    if (
+      filters.machineNumber &&
+      String(record.machineNumber) !== String(filters.machineNumber)
+    )
+      return false;
+    return true;
+  });
+  const scrapReportRecords = [
+    ...inspectionScrapRecords.map((inspection) => ({
+      ...inspection,
+      quantity: inspection.scrapQuantity,
+      reason: inspection.scrapReason || inspection.decisionReason,
+    })),
+    ...filteredScrapRecords,
+  ];
   const nonconformityRecords = filtered.filter(
     (inspection) => inspection.decision !== DECISIONS.ACCEPTED,
   );
@@ -203,14 +244,17 @@ export default function ReportsPage() {
         </button>
         {SHIFT_LIST.map((shift) => {
           const shiftRecords = shiftIssues.filter(
-            (issue) => issue.shift === shift,
+            (issue) =>
+              issue.shift === shift &&
+              (!filters.dateFrom || issue.date >= filters.dateFrom) &&
+              (!filters.dateTo || issue.date <= filters.dateTo),
           );
           return (
             <button
               key={shift}
               onClick={() =>
                 exportReport(
-                  buildShiftIssuesPdf,
+                  "buildShiftIssuesPdf",
                   shiftRecords,
                   `Shift_${shift}_Report`,
                 )
@@ -224,16 +268,17 @@ export default function ReportsPage() {
         })}
         <button
           onClick={() =>
-            exportReport(buildScrapPdf, scrapRecords, "Scrap_Report")
+            exportReport("buildScrapPdf", scrapReportRecords, "Scrap_Report")
           }
           className="btn-secondary flex items-center gap-2"
         >
-          <FileDown className="w-4 h-4" /> تقرير الهالك ({scrapRecords.length})
+          <FileDown className="w-4 h-4" /> تقرير الهالك (
+          {scrapReportRecords.length})
         </button>
         <button
           onClick={() =>
             exportReport(
-              buildNonconformityPdf,
+              "buildNonconformityPdf",
               nonconformityRecords,
               "Nonconformity_Report",
             )
@@ -246,6 +291,9 @@ export default function ReportsPage() {
         <span className="flex items-center gap-2 text-steel-400 text-sm">
           <Eye className="w-4 h-4" /> {filtered.length} نتيجة من أصل{" "}
           {inspections.length}
+        </span>
+        <span className="badge bg-danger-500/20 text-danger-300">
+          الهالك في الفلترة: {filteredKpis.scrapQuantity}
         </span>
       </div>
 
@@ -324,7 +372,7 @@ export default function ReportsPage() {
               type="button"
               onClick={() =>
                 exportReport(
-                  buildInspectionPdf,
+                  "buildInspectionPdf",
                   selectedInspection,
                   `Inspection_${selectedInspection.id}`,
                 )

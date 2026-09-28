@@ -34,6 +34,26 @@ export function exportInspectionsToExcel(
     "تاريخ الإغلاق": i.capaClosedDate || "",
   }));
 
+  const summaryRows = [
+    { العنصر: "إجمالي الفحوصات", القيمة: inspections.length },
+    {
+      العنصر: "المرفوضة",
+      القيمة: inspections.filter((i) => i.decision === "مرفوض").length,
+    },
+    {
+      العنصر: "المقبولة بشرط",
+      القيمة: inspections.filter((i) => i.decision === "مقبول بشرط").length,
+    },
+    {
+      العنصر: "المقبولة",
+      القيمة: inspections.filter((i) => i.decision === "مقبول").length,
+    },
+    {
+      العنصر: "السجل الذي تم تصديره",
+      القيمة: new Date().toLocaleDateString("ar-EG"),
+    },
+  ];
+
   const worksheet = XLSX.utils.json_to_sheet(rows, {
     header: [
       "رقم الفحص",
@@ -63,7 +83,6 @@ export function exportInspectionsToExcel(
     ],
   });
 
-  // تعيين اتجاه الشيت والعرض التقريبي للأعمدة
   worksheet["!cols"] = [
     { wch: 18 },
     { wch: 12 },
@@ -90,9 +109,18 @@ export function exportInspectionsToExcel(
     { wch: 16 },
     { wch: 14 },
   ];
+  const dataRange = `A1:${XLSX.utils.encode_col(23)}${rows.length + 1}`;
+  worksheet["!ref"] = dataRange;
+  if (rows.length > 0) worksheet["!autofilter"] = { ref: dataRange };
+
+  const summarySheet = XLSX.utils.json_to_sheet(summaryRows, {
+    header: ["العنصر", "القيمة"],
+  });
+  summarySheet["!cols"] = [{ wch: 28 }, { wch: 22 }];
 
   const workbook = XLSX.utils.book_new();
   workbook.Workbook = { Views: [{ RTL: true }] };
+  XLSX.utils.book_append_sheet(workbook, summarySheet, "ملخص التقرير");
   XLSX.utils.book_append_sheet(workbook, worksheet, "تقرير الفحوصات");
 
   const dateStr = new Date().toISOString().slice(0, 10);

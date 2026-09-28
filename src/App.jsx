@@ -1,13 +1,9 @@
-import React, { useState } from "react";
+import React, { lazy, Suspense, useState } from "react";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
 import Sidebar from "./components/Layout/Sidebar.jsx";
 import Header from "./components/Layout/Header.jsx";
 import Dashboard from "./components/Dashboard/Dashboard.jsx";
 import InspectionForm from "./components/Inspection/InspectionForm.jsx";
-import ShiftIssuesPage from "./components/Shift/ShiftIssuesPage.jsx";
-import CapaTracker from "./components/Capa/CapaTracker.jsx";
-import ReportsPage from "./components/Reports/ReportsPage.jsx";
-import BackupPage from "./components/Backup/BackupPage.jsx";
 import { useApp } from "./context/AppContext.jsx";
 import { VIEWS } from "./data/views.js";
 import {
@@ -16,6 +12,20 @@ import {
   verifyCredentials,
   getAuthRole,
 } from "./utils/auth.js";
+
+const ShiftIssuesPage = lazy(() => import("./components/Shift/ShiftIssuesPage.jsx"));
+const CapaTracker = lazy(() => import("./components/Capa/CapaTracker.jsx"));
+const ReportsPage = lazy(() => import("./components/Reports/ReportsPage.jsx"));
+const BackupPage = lazy(() => import("./components/Backup/BackupPage.jsx"));
+const ScrapPage = lazy(() => import("./components/Scrap/ScrapPage.jsx"));
+
+function ViewLoading() {
+  return (
+    <div className="flex min-h-48 items-center justify-center text-steel-300" role="status">
+      جاري تحميل الصفحة...
+    </div>
+  );
+}
 
 function LoginScreen({ onAuthenticated }) {
   const [password, setPassword] = useState("");
@@ -118,7 +128,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authenticated, setAuthenticatedState] = useState(isAuthenticated);
   const [role, setRole] = useState(getAuthRole);
-  const { loading } = useApp();
+  const { loading, loadError, refresh } = useApp();
 
   const lockSystem = () => {
     setAuthenticated(false);
@@ -134,6 +144,8 @@ export default function App() {
         ) : (
           <InspectionForm onDone={() => setView(VIEWS.DASHBOARD)} />
         );
+      case VIEWS.SCRAP:
+        return <ScrapPage readOnly={role === "manager"} />;
       case VIEWS.CAPA:
         return <CapaTracker readOnly={role === "manager"} />;
       case VIEWS.SHIFT_ISSUES:
@@ -172,6 +184,20 @@ export default function App() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-steel-950 p-4" dir="rtl">
+        <div className="card w-full max-w-lg space-y-4 p-6 text-center">
+          <h1 className="text-lg font-black text-danger-300">تعذر تحميل بيانات النظام</h1>
+          <p className="text-sm text-steel-300">{loadError}</p>
+          <button className="btn-primary" onClick={() => refresh().catch(() => {})}>
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-steel-950 flex" dir="rtl">
       <Sidebar
@@ -189,7 +215,7 @@ export default function App() {
           readOnly={role === "manager"}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {renderView()}
+          <Suspense fallback={<ViewLoading />}>{renderView()}</Suspense>
         </main>
       </div>
     </div>

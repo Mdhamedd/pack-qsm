@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Amiri UI";
+  src: url("./assets/fonts/Amiri-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Amiri UI";
+  src: url("./assets/fonts/Amiri-Bold.ttf") format("truetype");
+  font-weight: 700 900;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --app-bg: #0b1119;
+  --app-panel: rgba(15, 23, 42, 0.92);
+  --app-border: rgba(148, 163, 184, 0.2);
+  --app-shadow: 0 10px 30px rgba(15, 23, 42, 0.28);
+}
+
 html,
 body,
 #root {
@@ -9,12 +31,22 @@ body,
 }
 
 html {
-  background: #0b1119;
+  background: var(--app-bg);
+  scroll-behavior: smooth;
 }
 
 body {
   min-width: 320px;
   overflow-x: hidden;
+  font-family: "Amiri UI", Tahoma, sans-serif;
+  direction: rtl;
+  background:
+    radial-gradient(circle at top, rgba(245, 158, 11, 0.08), transparent 25%),
+    var(--app-bg);
+  color: #e2e8f0;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .safe-top {
@@ -24,6 +56,10 @@ body {
 @media (max-width: 639px) {
   main {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  body {
+    font-size: 15px;
   }
 }
 
@@ -47,6 +83,15 @@ body {
   .card {
     @apply bg-steel-900 border border-steel-800 rounded-2xl shadow-industrial;
   }
+  .dashboard-hero {
+    background: linear-gradient(
+      135deg,
+      rgba(245, 158, 11, 0.12),
+      rgba(15, 23, 42, 0.96)
+    );
+    border-color: rgba(245, 158, 11, 0.2);
+    box-shadow: var(--app-shadow);
+  }
   .btn-primary {
     @apply bg-warning-500 hover:bg-warning-600 text-steel-950 font-bold py-2.5 px-4 rounded-xl transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
   }
@@ -64,5 +109,22 @@ body {
   }
   .badge {
     @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold;
+  }
+}
+
+@media (max-width: 640px) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .card {
+    border-radius: 1rem;
+  }
+
+  .dashboard-hero {
+    padding: 1rem;
   }
 }

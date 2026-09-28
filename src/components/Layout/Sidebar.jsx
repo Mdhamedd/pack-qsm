@@ -8,6 +8,7 @@ import {
   DatabaseBackup,
   X,
   Factory,
+  Scale,
 } from "lucide-react";
 import { VIEWS } from "../../data/views.js";
 import { useApp } from "../../context/AppContext.jsx";
@@ -15,6 +16,7 @@ import { useApp } from "../../context/AppContext.jsx";
 const NAV_ITEMS = [
   { key: VIEWS.DASHBOARD, label: "لوحة التحكم", icon: LayoutDashboard },
   { key: VIEWS.NEW_INSPECTION, label: "فحص جديد", icon: FilePlus2 },
+  { key: VIEWS.SCRAP, label: "تسجيل الهالك", icon: Scale },
   { key: VIEWS.SHIFT_ISSUES, label: "متابعة الوردية", icon: ClipboardPlus },
   { key: VIEWS.CAPA, label: "متابعة الحالات (CAPA)", icon: ClipboardList },
   { key: VIEWS.REPORTS, label: "التقارير والتصدير", icon: FileBarChart },

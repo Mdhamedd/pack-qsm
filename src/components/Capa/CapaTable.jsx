@@ -34,6 +34,7 @@ function CapaRow({ inspection, readOnly }) {
   const [escalation, setEscalation] = useState(inspection.capaEscalation || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
 
   const isClosed = status && status.startsWith("مغلق");
 
@@ -55,6 +56,7 @@ function CapaRow({ inspection, readOnly }) {
       return;
     }
     setError("");
+    setSaved(false);
     setSaving(true);
     try {
       await editInspection(inspection.id, {
@@ -66,6 +68,9 @@ function CapaRow({ inspection, readOnly }) {
         capaEscalation: escalation,
         capaClosedDate: isClosed ? new Date().toISOString().slice(0, 10) : null,
       });
+      setSaved(true);
+    } catch (saveError) {
+      setError(saveError.message || "تعذر حفظ تحديث الحالة");
     } finally {
       setSaving(false);
     }
@@ -244,6 +249,11 @@ function CapaRow({ inspection, readOnly }) {
             >
               <Save className="w-4 h-4" /> حفظ التحديث
             </button>
+          )}
+          {saved && (
+            <p className="text-sm font-semibold text-success-400">
+              تم حفظ الحالة بنجاح
+            </p>
           )}
         </div>
       )}

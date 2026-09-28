@@ -12,7 +12,7 @@ export default defineConfig({
         enabled: true,
         type: "module",
       },
-      includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
+      includeAssets: ["icon-192.png", "icon-512.png"],
       manifest: {
         name: "Pack to Pack QMS",
         short_name: "P2P QMS",
@@ -28,10 +28,10 @@ export default defineConfig({
         orientation: "any",
         prefer_related_applications: false,
         icons: [
-          { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
           {
-            src: "icons/icon-512.png",
+            src: "/icon-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
@@ -62,6 +62,6 @@ export default defineConfig({
   optimizeDeps: {
     // pdfmake يحتاج استيراد مسارات فرعية (deep imports)؛ بدون هذا السطر
     // قد يظهر تحذير/خطأ من Vite بخصوص "Avoid deep import" عند تصدير PDF.
-    include: ["pdfmake/build/pdfmake", "pdfmake/build/vfs_fonts"],
+    include: ["pdfmake/build/pdfmake"],
   },
 });

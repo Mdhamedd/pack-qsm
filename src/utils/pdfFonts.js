@@ -1,18 +1,8 @@
 import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
 import amiriRegularUrl from "../assets/fonts/Amiri-Regular.ttf?url";
 import amiriBoldUrl from "../assets/fonts/Amiri-Bold.ttf?url";
 
 export const PDF_FONT = "Amiri";
-
-const ROBOTO_FONTS = {
-  Roboto: {
-    normal: "Roboto-Regular.ttf",
-    bold: "Roboto-Medium.ttf",
-    italics: "Roboto-Italic.ttf",
-    bolditalics: "Roboto-MediumItalic.ttf",
-  },
-};
 
 const AMIRI_FONTS = {
   Amiri: {
@@ -22,28 +12,6 @@ const AMIRI_FONTS = {
     bolditalics: "Amiri-Bold.ttf",
   },
 };
-
-function extractVfs(mod) {
-  const candidates = [
-    mod?.pdfMake?.vfs,
-    mod?.default?.pdfMake?.vfs,
-    mod?.vfs,
-    mod?.default?.vfs,
-    mod?.default,
-    mod,
-  ];
-  for (const candidate of candidates) {
-    if (
-      candidate &&
-      typeof candidate === "object" &&
-      !Array.isArray(candidate) &&
-      (candidate["Roboto-Regular.ttf"] || candidate["Roboto-Medium.ttf"])
-    ) {
-      return candidate;
-    }
-  }
-  return {};
-}
 
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
@@ -63,7 +31,6 @@ async function fontFileToBase64(url) {
   return arrayBufferToBase64(await response.arrayBuffer());
 }
 
-const defaultVfs = extractVfs(pdfFonts);
 let cachedVfs = null;
 let fontsReady = null;
 
@@ -75,12 +42,11 @@ export function ensurePdfFonts() {
         fontFileToBase64(amiriBoldUrl),
       ]);
       cachedVfs = {
-        ...defaultVfs,
         "Amiri-Regular.ttf": regular,
         "Amiri-Bold.ttf": bold,
       };
       pdfMake.addVirtualFileSystem(cachedVfs);
-      pdfMake.setFonts({ ...ROBOTO_FONTS, ...AMIRI_FONTS });
+      pdfMake.setFonts(AMIRI_FONTS);
       return cachedVfs;
     })();
   }
@@ -92,7 +58,7 @@ export function getPdfVfs() {
 }
 
 export function getPdfFontMap() {
-  return { ...ROBOTO_FONTS, ...AMIRI_FONTS };
+  return AMIRI_FONTS;
 }
 
 export default pdfMake;

@@ -9,7 +9,7 @@ import {
   DEFAULT_TECHNICIANS,
   INSPECTOR_NAME,
   PRODUCTS,
-} from "../data/constants";
+} from "../data/constants.js";
 
 const KEYS = {
   INSPECTIONS: "p2p_qms_inspections_v1",
@@ -17,6 +17,7 @@ const KEYS = {
   SETTINGS: "p2p_qms_settings_v1",
   PRODUCTS: "p2p_qms_products_v1",
   TECHNICIANS: "p2p_qms_technicians_v1",
+  SCRAP: "p2p_qms_scrap_v1",
 };
 
 function readLocal(key, fallback) {
@@ -35,7 +36,10 @@ function writeLocal(key, value) {
     return true;
   } catch (e) {
     console.error("Storage write error:", e);
-    return false;
+    throw new Error(
+      "تعذر حفظ البيانات على هذا الجهاز. صدّر نسخة احتياطية أو حرر مساحة ثم حاول مرة أخرى.",
+      { cause: e },
+    );
   }
 }
 
@@ -45,6 +49,10 @@ function uid() {
 
 function issueUid() {
   return `shift_issue_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function scrapUid() {
+  return `scrap_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
 // -------------------- عمليات الفحوصات (Inspections) --------------------
@@ -63,6 +71,7 @@ export async function getInspectionById(id) {
 
 export async function saveInspection(inspection) {
   const all = readLocal(KEYS.INSPECTIONS, []);
+  const safeInspection = inspection || {};
   const newRecord = {
     id: uid(),
     createdAt: new Date().toISOString(),
@@ -74,8 +83,8 @@ export async function saveInspection(inspection) {
     capaEscalation: "",
     capaClosedDate: null,
     capaHistory: [],
-    ...inspection,
-    inspectorName: INSPECTOR_NAME,
+    ...safeInspection,
+    inspectorName: safeInspection.inspectorName || INSPECTOR_NAME,
   };
   all.unshift(newRecord);
   writeLocal(KEYS.INSPECTIONS, all);
@@ -135,6 +144,43 @@ export async function deleteShiftIssue(id) {
   return true;
 }
 
+// -------------------- سجلات الهالك المستقلة --------------------
+
+export async function getScrapRecords() {
+  return readLocal(KEYS.SCRAP, []);
+}
+
+export async function saveScrapRecord(record) {
+  const all = readLocal(KEYS.SCRAP, []);
+  const newRecord = {
+    id: scrapUid(),
+    createdAt: new Date().toISOString(),
+    quantity: 0,
+    ...record,
+  };
+  all.unshift(newRecord);
+  writeLocal(KEYS.SCRAP, all);
+  return newRecord;
+}
+
+export async function updateScrapRecord(id, patch) {
+  const all = readLocal(KEYS.SCRAP, []);
+  const idx = all.findIndex((record) => record.id === id);
+  if (idx === -1) return null;
+  all[idx] = { ...all[idx], ...patch, updatedAt: new Date().toISOString() };
+  writeLocal(KEYS.SCRAP, all);
+  return all[idx];
+}
+
+export async function deleteScrapRecord(id) {
+  const all = readLocal(KEYS.SCRAP, []);
+  writeLocal(
+    KEYS.SCRAP,
+    all.filter((record) => record.id !== id),
+  );
+  return true;
+}
+
 // -------------------- المنتجات --------------------
 
 export async function getProducts() {
@@ -178,6 +224,7 @@ export async function saveTechnicians(technicians) {
 export async function exportBackupObject() {
   const inspections = readLocal(KEYS.INSPECTIONS, []);
   const shiftIssues = readLocal(KEYS.SHIFT_ISSUES, []);
+  const scrap = readLocal(KEYS.SCRAP, []);
   const settings = readLocal(KEYS.SETTINGS, {});
   const products = readLocal(KEYS.PRODUCTS, PRODUCTS);
   const technicians = readLocal(KEYS.TECHNICIANS, DEFAULT_TECHNICIANS);
@@ -187,6 +234,7 @@ export async function exportBackupObject() {
     exportedAt: new Date().toISOString(),
     inspections,
     shiftIssues,
+    scrap,
     settings,
     products,
     technicians,
@@ -197,23 +245,73 @@ export async function importBackupObject(backup) {
   if (!backup || !Array.isArray(backup.inspections)) {
     throw new Error("ملف النسخة الاحتياطية غير صالح");
   }
-  writeLocal(KEYS.INSPECTIONS, backup.inspections);
-  if (Array.isArray(backup.shiftIssues))
-    writeLocal(KEYS.SHIFT_ISSUES, backup.shiftIssues);
-  if (backup.settings) writeLocal(KEYS.SETTINGS, backup.settings);
-  if (Array.isArray(backup.products))
-    writeLocal(KEYS.PRODUCTS, backup.products);
-  if (Array.isArray(backup.technicians))
-    writeLocal(KEYS.TECHNICIANS, backup.technicians);
+  const entries = [[KEYS.INSPECTIONS, backup.inspections]];
+  const optionalArrays = [
+    ["shiftIssues", KEYS.SHIFT_ISSUES],
+    ["scrap", KEYS.SCRAP],
+    ["products", KEYS.PRODUCTS],
+    ["technicians", KEYS.TECHNICIANS],
+  ];
+  for (const [property, key] of optionalArrays) {
+    if (property in backup) {
+      if (!Array.isArray(backup[property])) {
+        throw new Error("ملف النسخة الاحتياطية غير صالح");
+      }
+      entries.push([key, backup[property]]);
+    }
+  }
+  if ("settings" in backup) {
+    if (
+      !backup.settings ||
+      typeof backup.settings !== "object" ||
+      Array.isArray(backup.settings)
+    ) {
+      throw new Error("ملف النسخة الاحتياطية غير صالح");
+    }
+    entries.push([KEYS.SETTINGS, backup.settings]);
+  }
+
+  const previous = new Map(
+    entries.map(([key]) => [key, localStorage.getItem(key)]),
+  );
+  try {
+    entries.forEach(([key, value]) =>
+      localStorage.setItem(key, JSON.stringify(value)),
+    );
+  } catch (e) {
+    for (const [key, value] of previous) {
+      try {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      } catch (rollbackError) {
+        console.error("Backup rollback error:", rollbackError);
+      }
+    }
+    console.error("Backup import error:", e);
+    throw new Error(
+      "تعذر استرجاع النسخة الاحتياطية بالكامل. تم الحفاظ على البيانات السابقة قدر الإمكان.",
+      { cause: e },
+    );
+  }
   return true;
 }
 
 export async function clearAllData() {
-  localStorage.removeItem(KEYS.INSPECTIONS);
-  localStorage.removeItem(KEYS.SHIFT_ISSUES);
-  localStorage.removeItem(KEYS.SETTINGS);
-  localStorage.removeItem(KEYS.PRODUCTS);
-  localStorage.removeItem(KEYS.TECHNICIANS);
+  const keys = Object.values(KEYS);
+  const previous = new Map(keys.map((key) => [key, localStorage.getItem(key)]));
+  try {
+    keys.forEach((key) => localStorage.removeItem(key));
+  } catch (e) {
+    for (const [key, value] of previous) {
+      if (value === null) continue;
+      try {
+        localStorage.setItem(key, value);
+      } catch (rollbackError) {
+        console.error("Clear data rollback error:", rollbackError);
+      }
+    }
+    throw new Error("تعذر مسح البيانات بالكامل.", { cause: e });
+  }
   return true;
 }
 

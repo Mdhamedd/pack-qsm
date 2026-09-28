@@ -8,7 +8,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useApp } from "../../context/AppContext.jsx";
-import { MACHINES } from "../../data/constants";
+import { MACHINES, SHIFT_LIST } from "../../data/constants";
 
 const TIME_SLOTS = [
   "00:00 - 02:00",
@@ -25,13 +25,12 @@ const TIME_SLOTS = [
   "22:00 - 00:00",
 ];
 
-const SHIFT_LIST = ["صباحية", "مسائية", "ليلية"];
 const STATUS_LIST = ["مفتوحة", "جاري التعامل", "مغلقة"];
 const SEVERITY_LIST = ["عادية", "مهمة", "حرجة"];
 
 const emptyForm = () => ({
   date: new Date().toISOString().slice(0, 10),
-  shift: "صباحية",
+  shift: SHIFT_LIST[0],
   timeSlot: TIME_SLOTS[Math.floor(new Date().getHours() / 2)],
   machineNumber: MACHINES[0].value,
   issueType: "",
@@ -87,6 +86,8 @@ export default function ShiftIssuesPage({ readOnly = false }) {
         machineNumber: Number(form.machineNumber),
       });
       setForm(emptyForm());
+    } catch (saveError) {
+      setError(saveError.message || "تعذر حفظ مشكلة الوردية. حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }

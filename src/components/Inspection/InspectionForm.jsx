@@ -9,6 +9,7 @@ import {
   DECISIONS,
   INSPECTOR_NAME,
   SHIFT_LIST,
+  TECHNICIAN_GROUPS,
 } from "../../data/constants";
 import DefectSelector from "./DefectSelector.jsx";
 import VoiceNoteButton from "./VoiceNoteButton.jsx";
@@ -36,6 +37,7 @@ const emptyForm = () => ({
   imageBase64: null,
   scrapQuantity: "",
   scrapReason: "",
+  lidLockOk: true,
 });
 
 export default function InspectionForm({ onDone }) {
@@ -57,6 +59,20 @@ export default function InspectionForm({ onDone }) {
   const [technicianError, setTechnicianError] = useState("");
 
   const update = (patch) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const updateLidLock = (lidLockOk) => {
+    const type = "قفلة الغطاء غير مظبوطة";
+    const lockDefect = { id: `lid_${Date.now()}`, type, severity: "رئيسي" };
+    setForm((previous) => ({
+      ...previous,
+      lidLockOk,
+      defects: lidLockOk
+        ? previous.defects.filter((defect) => defect.type !== type)
+        : previous.defects.some((defect) => defect.type === type)
+          ? previous.defects
+          : [...previous.defects, lockDefect],
+    }));
+  };
 
   const handleAddProduct = async () => {
     try {
@@ -85,6 +101,12 @@ export default function InspectionForm({ onDone }) {
       return "يرجى إدخال وزن عينة صحيح";
     if (form.decision !== DECISIONS.ACCEPTED && form.defects.length === 0) {
       return "يرجى تحديد العيوب المرتبطة بالقرار (مرفوض / مقبول بشرط)";
+    }
+    if (
+      !form.lidLockOk &&
+      !form.defects.some((defect) => defect.type === "قفلة الغطاء غير مظبوطة")
+    ) {
+      return "سجل عيب قفلة الغطاء عند اختيار (غلط)";
     }
     if (form.decision === DECISIONS.REJECTED && !form.decisionReason.trim()) {
       return "يرجى كتابة سبب الرفض بالتفصيل";
@@ -119,6 +141,8 @@ export default function InspectionForm({ onDone }) {
         shareInspectionOnWhatsApp(saved, settings.whatsappNumber);
       }
       setForm(emptyForm());
+    } catch (saveError) {
+      setError(saveError.message || "تعذر حفظ الفحص. حاول مرة أخرى.");
     } finally {
       setSaving(false);
     }
@@ -283,11 +307,31 @@ export default function InspectionForm({ onDone }) {
               onChange={(e) => update({ operatorName: e.target.value })}
             >
               <option value="">اختر اسم الفني</option>
-              {technicians.map((technician) => (
-                <option key={technician} value={technician}>
-                  {technician}
-                </option>
+              {TECHNICIAN_GROUPS.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.members
+                    .filter((technician) => technicians.includes(technician))
+                    .map((technician) => (
+                      <option key={technician} value={technician}>
+                        {technician}
+                      </option>
+                    ))}
+                </optgroup>
               ))}
+              <optgroup label="فنيون مضافون">
+                {technicians
+                  .filter(
+                    (technician) =>
+                      !TECHNICIAN_GROUPS.some((group) =>
+                        group.members.includes(technician),
+                      ),
+                  )
+                  .map((technician) => (
+                    <option key={technician} value={technician}>
+                      {technician}
+                    </option>
+                  ))}
+              </optgroup>
             </select>
             <div className="flex flex-col sm:flex-row gap-2 mt-2">
               <input
@@ -447,6 +491,30 @@ export default function InspectionForm({ onDone }) {
             )}
           </div>
         )}
+
+        <div className="border border-steel-700 bg-steel-900/60 rounded-xl p-4">
+          <label className="label-field">قفلة الغطاء مع العلبة</label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: true, label: "صح - القفلة تمام" },
+              { value: false, label: "غلط - القفلة غير مظبوطة" },
+            ].map((option) => (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => updateLidLock(option.value)}
+                className={`py-2.5 rounded-xl font-bold text-sm border ${form.lidLockOk === option.value ? (option.value ? "bg-success-500 text-steel-950 border-success-500" : "bg-danger-600 text-white border-danger-600") : "bg-steel-800 text-steel-300 border-steel-700"}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {!form.lidLockOk && (
+            <p className="text-danger-300 text-xs mt-2">
+              أضف عيب القفلة من قائمة العيوب لربط السبب بالمتابعة والتحليل.
+            </p>
+          )}
+        </div>
 
         {form.decision !== DECISIONS.ACCEPTED && (
           <div>

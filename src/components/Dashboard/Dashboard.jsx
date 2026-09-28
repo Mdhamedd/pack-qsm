@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { lazy, Suspense, useRef } from "react";
 import {
   ClipboardCheck,
   PercentCircle,
@@ -10,9 +10,11 @@ import {
 import { useApp } from "../../context/AppContext.jsx";
 import KpiCard from "./KpiCard.jsx";
 import AlertBar from "./AlertBar.jsx";
-import ParetoChart from "./ParetoChart.jsx";
-import DecisionPieChart from "./DecisionPieChart.jsx";
 import { shareShiftSummaryOnWhatsApp } from "../../utils/whatsapp.js";
+import { SCRAP_RATE_ALERT_THRESHOLD } from "../../data/constants.js";
+
+const ParetoChart = lazy(() => import("./ParetoChart.jsx"));
+const DecisionPieChart = lazy(() => import("./DecisionPieChart.jsx"));
 
 export default function Dashboard({ onNewInspection, readOnly = false }) {
   const { kpis, settings, inspections } = useApp();
@@ -20,12 +22,58 @@ export default function Dashboard({ onNewInspection, readOnly = false }) {
   const pieRef = useRef(null);
 
   const recent = inspections.slice(0, 6);
+  const today = new Date();
+  const welcomeMessage =
+    kpis.total === 0
+      ? "ابدأ بتسجيل أول فحص لتظهر مؤشرات الجودة وحالة خط الإنتاج هنا."
+      : kpis.openCasesCount > 0 || kpis.scrapRate > SCRAP_RATE_ALERT_THRESHOLD
+        ? "توجد مؤشرات تحتاج إلى مراجعة — راجع نسبة الرفض وحالات المتابعة لتحديد الأولويات."
+        : "المؤشرات الحالية ضمن الحدود — لا توجد حالات مفتوحة أو ارتفاع في نسبة الرفض.";
 
   return (
     <div className="space-y-5">
+      <div className="card dashboard-hero p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.18em] text-warning-300 uppercase">
+              Pack to Pack QMS
+            </p>
+            <h2 className="mt-2 text-xl sm:text-2xl font-black text-steel-50">
+              مرحباً بك في لوحة مراقبة الجودة
+            </h2>
+            <p className="mt-2 text-sm text-steel-300 max-w-2xl">
+              {welcomeMessage}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 min-w-[220px]">
+            <div className="rounded-xl bg-steel-800/80 px-3 py-2 text-center">
+              <div className="text-[11px] text-steel-400">اليوم</div>
+              <div className="mt-1 text-lg font-black text-steel-50">
+                {today.toLocaleDateString("ar-EG", {
+                  day: "2-digit",
+                  month: "2-digit",
+                })}
+              </div>
+            </div>
+            <div className="rounded-xl bg-steel-800/80 px-3 py-2 text-center">
+              <div className="text-[11px] text-steel-400">الفحوصات</div>
+              <div className="mt-1 text-lg font-black text-steel-50">
+                {kpis.total}
+              </div>
+            </div>
+            <div className="rounded-xl bg-danger-600/15 px-3 py-2 text-center">
+              <div className="text-[11px] text-danger-300">متابعة</div>
+              <div className="mt-1 text-lg font-black text-danger-400">
+                {kpis.openCasesCount}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <AlertBar kpis={kpis} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <KpiCard
           icon={ClipboardCheck}
           label="إجمالي الفحوصات"
@@ -37,9 +85,15 @@ export default function Dashboard({ onNewInspection, readOnly = false }) {
           icon={PercentCircle}
           label="معدل الرفض (Scrap Rate)"
           value={`${kpis.scrapRate.toFixed(1)}%`}
-          accent={kpis.scrapRate > 3 ? "bg-danger-600/20" : "bg-success-500/20"}
+          accent={
+            kpis.scrapRate > SCRAP_RATE_ALERT_THRESHOLD
+              ? "bg-danger-600/20"
+              : "bg-success-500/20"
+          }
           colorClass={
-            kpis.scrapRate > 3 ? "text-danger-400" : "text-success-400"
+            kpis.scrapRate > SCRAP_RATE_ALERT_THRESHOLD
+              ? "text-danger-400"
+              : "text-success-400"
           }
         />
         <KpiCard
@@ -56,6 +110,13 @@ export default function Dashboard({ onNewInspection, readOnly = false }) {
           accent="bg-danger-600/20"
           colorClass="text-danger-400"
         />
+        <KpiCard
+          icon={FolderOpen}
+          label="إجمالي الهالك"
+          value={kpis.scrapQuantity}
+          accent="bg-danger-600/20"
+          colorClass="text-danger-300"
+        />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
@@ -63,11 +124,15 @@ export default function Dashboard({ onNewInspection, readOnly = false }) {
           <h3 className="font-bold text-steel-100 mb-3">
             تحليل باريتو للعيوب الأكثر تكرارًا
           </h3>
-          <ParetoChart ref={paretoRef} data={kpis.paretoData} />
+          <Suspense fallback={<ChartLoading />}>
+            <ParetoChart ref={paretoRef} data={kpis.paretoData} />
+          </Suspense>
         </div>
         <div className="card p-4">
           <h3 className="font-bold text-steel-100 mb-3">توزيع قرارات الجودة</h3>
-          <DecisionPieChart ref={pieRef} kpis={kpis} />
+          <Suspense fallback={<ChartLoading />}>
+            <DecisionPieChart ref={pieRef} kpis={kpis} />
+          </Suspense>
         </div>
       </div>
 
@@ -142,5 +207,16 @@ function DecisionBadge({ decision }) {
     <span className={`badge ${map[decision] || "bg-steel-700 text-steel-200"}`}>
       {decision}
     </span>
+  );
+}
+
+function ChartLoading() {
+  return (
+    <div
+      className="flex h-64 items-center justify-center text-sm text-steel-400"
+      role="status"
+    >
+      جاري تحميل الرسم...
+    </div>
   );
 }

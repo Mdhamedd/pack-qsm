@@ -46,13 +46,24 @@ export const DECISIONS = {
 };
 
 export const INSPECTOR_NAME = "محمد حامد";
-export const SHIFT_LIST = ["صباحية", "مسائية", "ليلية"];
+export const SHIFT_LIST = [
+  "الوردية الأولى",
+  "الوردية الثانية",
+  "الوردية الثالثة",
+];
 export const DEFAULT_TECHNICIANS = [
   "احمد مجدي",
   "محمد جمال",
   "محمد ناجح",
   "احمد سعد",
   "عبدالرحمن",
+];
+export const TECHNICIAN_GROUPS = [
+  {
+    label: "فريق 12 ساعة - أ",
+    members: ["احمد مجدي", "محمد جمال", "محمد ناجح"],
+  },
+  { label: "فريق 12 ساعة - ب", members: ["احمد سعد", "عبدالرحمن"] },
 ];
 
 export const DECISION_LIST = [
@@ -74,6 +85,7 @@ export const DEFECT_TYPES = [
   "انكماش (Shrinkage)",
   "تشوه (Deformation)",
   "تسريب (Leakage)",
+  "قفلة الغطاء غير مظبوطة",
 ];
 
 export const SEVERITY_LEVELS = {
