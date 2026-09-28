@@ -26,6 +26,7 @@ const emptyForm = () => ({
   sampleWeight: "",
   inspectorName: INSPECTOR_NAME,
   operatorName: "",
+  workerName: "",
   decision: DECISIONS.ACCEPTED,
   decisionReason: "",
   acceptanceConditions: "",
@@ -354,6 +355,16 @@ export default function InspectionForm({ onDone }) {
               </p>
             )}
           </div>
+
+          <div className="sm:col-span-2">
+            <label className="label-field">اسم العامل</label>
+            <input
+              className="input-field"
+              value={form.workerName}
+              onChange={(e) => update({ workerName: e.target.value })}
+              placeholder="ادخل اسم العامل"
+            />
+          </div>
         </div>
 
         <div>
@@ -503,7 +514,13 @@ export default function InspectionForm({ onDone }) {
                 key={option.label}
                 type="button"
                 onClick={() => updateLidLock(option.value)}
-                className={`py-2.5 rounded-xl font-bold text-sm border ${form.lidLockOk === option.value ? (option.value ? "bg-success-500 text-steel-950 border-success-500" : "bg-danger-600 text-white border-danger-600") : "bg-steel-800 text-steel-300 border-steel-700"}`}
+                className={`py-2.5 rounded-xl font-bold text-sm border ${
+                  form.lidLockOk === option.value
+                    ? option.value
+                      ? "bg-success-500 text-steel-950 border-success-500"
+                      : "bg-danger-600 text-white border-danger-600"
+                    : "bg-steel-800 text-steel-300 border-steel-700"
+                }`}
               >
                 {option.label}
               </button>
@@ -540,35 +557,33 @@ export default function InspectionForm({ onDone }) {
             className="input-field min-h-[100px]"
             value={form.notes}
             onChange={(e) => update({ notes: e.target.value })}
-            placeholder="اكتب ملاحظاتك هنا أو استخدم الإملاء الصوتي..."
+            placeholder="أي ملاحظات إضافية حول الفحص، الحالة العامة، أو توصيات..."
           />
           <div className="mt-2">
             <VoiceNoteButton
-              onTranscript={(text) =>
-                update({
-                  notes: `${form.notes ? form.notes + " " : ""}${text}`,
-                })
-              }
+              onNote={(note) => update({ notes: form.notes + note })}
             />
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-3 pt-2">
-          <button
-            disabled={saving}
-            onClick={() => handleSave(false)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" /> حفظ الفحص
-          </button>
-          <button
-            disabled={saving}
-            onClick={() => handleSave(true)}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <Send className="w-4 h-4" /> حفظ وإرسال عبر واتساب
-          </button>
-        </div>
+      <div className="flex flex-col sm:flex-row-reverse gap-3">
+        <button
+          onClick={() => handleSave(false)}
+          disabled={saving}
+          className="btn-primary flex-1 flex items-center justify-center gap-2"
+        >
+          <Save className="w-4 h-4" />
+          {saving ? "جاري الحفظ..." : "حفظ الفحص فقط"}
+        </button>
+        <button
+          onClick={() => handleSave(true)}
+          disabled={saving || !settings.whatsappNumber}
+          className="btn-success flex-1 flex items-center justify-center gap-2"
+        >
+          <Send className="w-4 h-4" />
+          {saving ? "جاري الحفظ..." : "حفظ ومشاركة على واتساب"}
+        </button>
       </div>
     </div>
   );

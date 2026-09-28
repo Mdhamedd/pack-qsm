@@ -47,7 +47,9 @@ export default function ReportsPage() {
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay =
-          `${i.productName} ${i.inspectorName} ${i.operatorName || ""} ${i.shift || ""}`.toLowerCase();
+          `${i.productName} ${i.inspectorName} ${i.operatorName || ""} ${
+            i.workerName || ""
+          } ${i.shift || ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -398,6 +400,14 @@ export default function ReportsPage() {
             <div>
               <span className="text-steel-400">المفتش:</span>{" "}
               {selectedInspection.inspectorName}
+            </div>
+            <div>
+              <span className="text-steel-400">الفني:</span>{" "}
+              {selectedInspection.operatorName || "-"}
+            </div>
+            <div>
+              <span className="text-steel-400">العامل:</span>{" "}
+              {selectedInspection.workerName || "-"}
             </div>
             <div>
               <span className="text-steel-400">المنتج:</span>{" "}
